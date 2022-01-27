@@ -137,7 +137,7 @@ def filter_words(words, rules, word_len):
 
 
 if __name__ == "__main__":
-    word_len = 10
+    word_len = 5
     suggestions = 5
     word_freq = get_frequencies("unigram_freq.csv", word_len)
     poss_words = word_freq.keys()
