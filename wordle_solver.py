@@ -13,11 +13,11 @@ def get_frequencies(filename):
     return word_freq
 
 
-def letter_frequencies(words):
+def weighted_letter_frequencies(words, word_freq):
     l_freq = [dict() for _ in range(5)]
     for word in words:
         for i in range(5):
-            l_freq[i][word[i]] = l_freq[i].get(word[i], 0) + 1
+            l_freq[i][word[i]] = l_freq[i].get(word[i], 0) + word_freq[word]
     return l_freq
 
 
@@ -77,27 +77,28 @@ def parse_rules(word, result, rules):
         correct, incorrect, exists = rules
     new_exists = dict()
 
+    checked = set()
     for i in range(5):
         r = result[i]
         c = word[i]
         if r == '.':
-            for j in range(5):
-                if correct[j] != c:
-                    incorrect[j].add(c)
+            if c not in checked:
+                for j in range(5):
+                    if correct[j] != c:
+                        incorrect[j].add(c)
+            else:
+                incorrect[i].add(c)
         elif r == 'c':
             correct[i] = c
+            new_exists[c] = new_exists.get(c, 0) + 1
         elif r == 'x':
             incorrect[i].add(c)
             new_exists[c] = new_exists.get(c, 0) + 1
+            checked.add(c)
 
-    cor_freq = dict()
-    for c in correct:
-        if c is not None:
-            cor_freq[c] = cor_freq.get(c, 0) + 1
-
-    lets = set(cor_freq.keys()).union(set(exists.keys())).union(set(new_exists.keys()))
+    lets = set(exists.keys()).union(set(new_exists.keys()))
     for c in lets:
-        counter = max(cor_freq.get(c, 0), exists.get(c, 0), new_exists.get(c, 0))
+        counter = max(exists.get(c, 0), new_exists.get(c, 0))
         if counter > 0:
             exists[c] = counter
 
@@ -135,8 +136,8 @@ if __name__ == "__main__":
 
     done = False
     while not done:
-        l_freq = letter_frequencies(poss_words)
-        best_words = get_best_words(poss_words, l_freq, word_freq, k=3)
+        l_freq = weighted_letter_frequencies(poss_words, word_freq)
+        best_words = get_best_words(poss_words, l_freq, word_freq, k=5)
         print("Possible answers: {}".format(len(poss_words)))
         print("Suggested answers: {}".format(best_words))
 
