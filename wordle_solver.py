@@ -42,11 +42,14 @@ def get_best_words(words, l_freq, word_freq, k=1):
         score = get_score(word, l_freq, word_freq)
         scored_words.append((word, score))
     scored_words.sort(key=lambda x: x[1], reverse=True)
-    best_words = [scored_words[i][0] for i in range(k)]
+    best_words = [scored_words[i][0] for i in range(min(k, len(scored_words)))]
     return best_words
 
 
 def inp_valid(word):
+    if word == "done":
+        return True
+
     if len(word) != 5:
         return False
     return word.isalpha()
@@ -134,6 +137,7 @@ if __name__ == "__main__":
     while not done:
         l_freq = letter_frequencies(poss_words)
         best_words = get_best_words(poss_words, l_freq, word_freq, k=3)
+        print("Possible answers: {}".format(len(poss_words)))
         print("Suggested answers: {}".format(best_words))
 
         chosen = ""
@@ -142,12 +146,15 @@ if __name__ == "__main__":
             chosen = chosen.lower()
             if len(chosen) == 0:
                 chosen = best_words[0]
-
-        result = ""
-        while not res_valid(result):
-            result = input("Enter result -> ")
-            if result == "done":
+            if chosen == "done":
                 done = True
+
+        if not done:
+            result = ""
+            while not res_valid(result):
+                result = input("Enter result -> ")
+                if result == "done":
+                    done = True
 
         if not done:
             rules = parse_rules(chosen, result, rules)
