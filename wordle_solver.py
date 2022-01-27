@@ -15,34 +15,39 @@ def get_frequencies(filename):
 
 def weighted_letter_frequencies(words, word_freq):
     l_freq = [dict() for _ in range(5)]
+    l_freq_all = dict()
     for word in words:
         for i in range(5):
             l_freq[i][word[i]] = l_freq[i].get(word[i], 0) + word_freq[word]
-    return l_freq
+            l_freq_all[word[i]] = l_freq_all.get(word[i], 0) + word_freq[word]
+    return l_freq, l_freq_all
 
 
-def get_score(word, l_freq, word_freq):
+def get_score(word, l_freq, l_freq_all, word_freq):
     score = 0
     # Calculate initial score via letter frequencies
     for i in range(5):
         score += l_freq[i].get(word[i], 0)
 
+    # Adjust weighting by unique letter count
+    word_chars = set(word)
+    for c in word_chars:
+        score += l_freq_all.get(c, 0)
+
     # Adjust weighting by word frequency
     score *= np.log(word_freq[word])
-
-    # Adjust weighting by unique letter count
-    score *= len(set(word))
 
     return score
 
 
-def get_best_words(words, l_freq, word_freq, k=1):
+def get_best_words(words, l_freq, l_freq_all, word_freq, k=1):
     scored_words = []
     for word in words:
-        score = get_score(word, l_freq, word_freq)
+        score = get_score(word, l_freq, l_freq_all, word_freq)
         scored_words.append((word, score))
+    largest_score = max(scored_words, key=lambda x: x[1])[1]
     scored_words.sort(key=lambda x: x[1], reverse=True)
-    best_words = [scored_words[i][0] for i in range(min(k, len(scored_words)))]
+    best_words = [(w[0], w[1] / largest_score) for w in scored_words[:min(k, len(scored_words))]]
     return best_words
 
 
@@ -91,6 +96,8 @@ def parse_rules(word, result, rules):
         elif r == 'c':
             correct[i] = c
             new_exists[c] = new_exists.get(c, 0) + 1
+            if c in incorrect[i]:
+                incorrect[i].remove(c)
         elif r == 'x':
             incorrect[i].add(c)
             new_exists[c] = new_exists.get(c, 0) + 1
@@ -131,22 +138,25 @@ def filter_words(words, rules):
 
 if __name__ == "__main__":
     word_freq = get_frequencies("unigram_freq.csv")
+    suggestions = 5
     poss_words = word_freq.keys()
     rules = None
 
     done = False
     while not done:
-        l_freq = weighted_letter_frequencies(poss_words, word_freq)
-        best_words = get_best_words(poss_words, l_freq, word_freq, k=5)
+        l_freq, l_freq_all = weighted_letter_frequencies(poss_words, word_freq)
+        best_words = get_best_words(poss_words, l_freq, l_freq_all, word_freq, k=suggestions)
         print("Possible answers: {}".format(len(poss_words)))
-        print("Suggested answers: {}".format(best_words))
+        print("Suggested answers:")
+        for i in range(len(best_words)):
+            print("\t{}) {} (Score: {})".format(i + 1, best_words[i][0], best_words[i][1]))
 
         chosen = ""
         while not inp_valid(chosen):
             chosen = input("Enter used guess (leave blank if used suggested best) -> ")
             chosen = chosen.lower()
             if len(chosen) == 0:
-                chosen = best_words[0]
+                chosen = best_words[0][0]
             if chosen == "done":
                 done = True
 
