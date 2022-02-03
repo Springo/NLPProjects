@@ -17,22 +17,28 @@ def weighted_letter_frequencies(words, word_freq, word_len):
     l_freq = [dict() for _ in range(word_len)]
     l_freq_all = dict()
     for word in words:
+        l_count = dict()
         for i in range(word_len):
-            l_freq[i][word[i]] = l_freq[i].get(word[i], 0) + word_freq[word]
-            l_freq_all[word[i]] = l_freq_all.get(word[i], 0) + word_freq[word]
+            c = word[i]
+            l_count[c] = l_count.get(c, 0) + 1
+            l_freq[i][c] = l_freq[i].get(c, 0) + word_freq[word]
+            l_freq_all[(c, l_count[c])] = l_freq_all.get((c, l_count[c]), 0) + word_freq[word]
     return l_freq, l_freq_all
 
 
-def get_score(word, l_freq, l_freq_all, word_freq, word_len):
+def get_score(word, l_freq, l_freq_all, word_freq, word_len, round_num):
     score = 0
+
     # Calculate initial score via letter frequencies
+    l_count = dict()
     for i in range(word_len):
-        score += l_freq[i].get(word[i], 0)
+        c = word[i]
+        l_count[c] = l_count.get(c, 0) + 1
+        score += l_freq[i].get(c, 0) / word_len
+        score += l_freq_all.get((c, l_count[c]), 0)
 
     # Adjust weighting by unique letter count
-    word_chars = set(word)
-    for c in word_chars:
-        score += l_freq_all.get(c, 0)
+    score *= len(set(word)) ** (2.0 / round_num)
 
     # Adjust weighting by word frequency
     score *= np.log(word_freq[word])
@@ -40,10 +46,10 @@ def get_score(word, l_freq, l_freq_all, word_freq, word_len):
     return score
 
 
-def get_best_words(words, l_freq, l_freq_all, word_freq, word_len, k=1):
+def get_best_words(words, l_freq, l_freq_all, word_freq, word_len, round_num, k=1):
     scored_words = []
     for word in words:
-        score = get_score(word, l_freq, l_freq_all, word_freq, word_len)
+        score = get_score(word, l_freq, l_freq_all, word_freq, word_len, round_num)
         scored_words.append((word, score))
     largest_score = max(scored_words, key=lambda x: x[1])[1]
     scored_words.sort(key=lambda x: x[1], reverse=True)
@@ -144,9 +150,11 @@ if __name__ == "__main__":
     rules = None
 
     done = False
+    round = 0
     while not done:
+        round += 1
         l_freq, l_freq_all = weighted_letter_frequencies(poss_words, word_freq, word_len)
-        best_words = get_best_words(poss_words, l_freq, l_freq_all, word_freq, word_len, k=suggestions)
+        best_words = get_best_words(poss_words, l_freq, l_freq_all, word_freq, word_len, round, k=suggestions)
         print("Possible answers: {}".format(len(poss_words)))
         print("Suggested answers:")
         for i in range(len(best_words)):
